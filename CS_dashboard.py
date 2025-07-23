@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import altair as alt
 import re
-from konlpy.tag import Okt
 from wordcloud import WordCloud
 
 
@@ -80,11 +79,6 @@ def filter_chats(chat_list):
         cleaned.append(text)
     return cleaned
 
-okt = Okt()
-
-def extract_keywords(text):
-    # 명사만 추출
-    return [word for word in okt.nouns(text) if len(word) > 1]
 
 DATA_PATH = "cs_chat_4-7.jsonl"
 df = load_data(DATA_PATH)
@@ -308,16 +302,10 @@ if not filtered.empty:
     texts = filtered["filtered_chats"].dropna().apply(lambda x: " ".join(x)).astype(str)
     full_text = " ".join(texts)
 
-    # 명사 리스트 추출
-    keyword_list = extract_keywords(full_text)
-    keyword_str = " ".join(keyword_list)
 
     st.subheader("CS 워드클라우드")
     if texts.str.strip().sum():  # 비어있지 않으면
-        wordcloud = WordCloud(
-            font_path="malgun.ttf", width=800, height=400, background_color="white"
-        ).generate(keyword_str)
-
+        wordcloud = WordCloud(font_path="malgun.ttf", width=800, height=400, background_color="white").generate(full_text)
         plt.figure(figsize=(10, 5))
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.axis("off")

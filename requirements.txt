@@ -4,3 +4,5 @@ numpy
 matplotlib
 altair
 wordcloud
+konlpy
+jpype1
