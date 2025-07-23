@@ -176,7 +176,7 @@ if not filtered.empty:
             tooltip=["week", "문의량"]
         )
         labels = alt.Chart(period_counts).mark_text(
-            dy=50, fontSize=13, fontWeight="bold"
+            dy=100, fontSize=13, fontWeight="bold", color="white"
         ).encode(
             x=alt.X("week:N"),
             y=alt.value(0),  # 그래프 아래로
