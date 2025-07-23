@@ -305,7 +305,7 @@ if not filtered.empty:
 
     st.subheader("CS 워드클라우드")
     if texts.str.strip().sum():  # 비어있지 않으면
-        wordcloud = WordCloud(font_path="malgun.ttf", width=800, height=400, background_color="white").generate(full_text)
+        wordcloud = WordCloud(font_path="NanumGothic.ttf", width=800, height=400, background_color="white").generate(full_text)
         plt.figure(figsize=(10, 5))
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.axis("off")
@@ -398,7 +398,7 @@ if not filtered.empty:
     texts = filtered[text_sel].dropna().astype(str)
     if len(texts) > 0:
         full_text = " ".join(texts)
-        wordcloud = WordCloud(font_path="malgun.ttf", width=800, height=400, background_color="white").generate(full_text)
+        wordcloud = WordCloud(font_path="NanumGothic.ttf", width=800, height=400, background_color="white").generate(full_text)
         plt.figure(figsize=(10,5))
         plt.imshow(wordcloud, interpolation='bilinear')
         plt.axis("off")
