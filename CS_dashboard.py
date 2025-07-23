@@ -6,6 +6,8 @@ import datetime
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import altair as alt
+import re
+from konlpy.tag import Okt
 from wordcloud import WordCloud
 
 
@@ -50,8 +52,43 @@ def extract_name(label):
         return label
     return label.rsplit(" (", 1)[0]
 
-DATA_PATH = "csdata_4-7.jsonl"
+stopwords = [
+    "안녕하세요", "감사합니다", "네", "고맙습니다", "수고하세요", "수고하셨습니다",
+    "감사", "문의", "확인", "예", "잘 부탁드립니다", "넵", "혹시", "제가", "맞습니다",
+    "수 있을까요", "지금"
+]
+
+def filter_chats(chat_list):
+    if not isinstance(chat_list, list):
+        return []
+    cleaned = []
+    for text in chat_list:
+        if not isinstance(text, str):
+            continue
+        # 1. @ 들어가면 (이메일, 멘션 등 포함) → 삭제
+        if "@" in text:
+            continue
+        # 2. http(s) 주소 포함 → 삭제
+        if re.search(r"https?://", text):
+            continue
+        # 3. 줄바꿈 포함 → 삭제
+        if "\n" in text:
+            continue
+        # 4. stopwords(상투어구) 포함 → 삭제
+        if any(word in text for word in stopwords):
+            continue
+        cleaned.append(text)
+    return cleaned
+
+okt = Okt()
+
+def extract_keywords(text):
+    # 명사만 추출
+    return [word for word in okt.nouns(text) if len(word) > 1]
+
+DATA_PATH = "cs_chat_4-7.jsonl"
 df = load_data(DATA_PATH)
+df = df[df["mediumType"] != "phone"].reset_index(drop=True)
 
 st.title("CS 대시보드")
 
@@ -60,7 +97,7 @@ if not df['firstAskedAt'].isna().all():
     min_date = df['firstAskedAt'].min().date()
     max_date = df['firstAskedAt'].max().date()
 else:
-    min_date = datetime.date(2023, 1, 1)
+    min_date = datetime.date(2023, 4, 1)
     max_date = datetime.date.today()
 기간 = st.date_input(
     "분석할 기간을 선택하세요",
@@ -220,7 +257,8 @@ if not filtered.empty:
     ).properties(width=650, height=300)
 
     st.altair_chart(avg_time_chart, use_container_width=True)
-    
+
+
     # 고객유형별 CS 문의량 집계
     top_n = 5
     고객유형_counts = df["고객유형"].value_counts().dropna()
@@ -260,6 +298,33 @@ if not filtered.empty:
         st.altair_chart(donut, use_container_width=True)
     else:
         st.info("고객유형 데이터가 없습니다.")
+    
+    #cs 워드클라우드
+
+    # chats 필드가 있는 DataFrame
+    filtered["filtered_chats"] = filtered["chats"].apply(filter_chats)
+
+    # 워드클라우드 등 가공용으로 join해서 사용
+    texts = filtered["filtered_chats"].dropna().apply(lambda x: " ".join(x)).astype(str)
+    full_text = " ".join(texts)
+
+    # 명사 리스트 추출
+    keyword_list = extract_keywords(full_text)
+    keyword_str = " ".join(keyword_list)
+
+    st.subheader("CS 워드클라우드")
+    if texts.str.strip().sum():  # 비어있지 않으면
+        wordcloud = WordCloud(
+            font_path="malgun.ttf", width=800, height=400, background_color="white"
+        ).generate(keyword_str)
+
+        plt.figure(figsize=(10, 5))
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off")
+        st.pyplot(plt.gcf())
+        plt.close()
+    else:
+        st.info("해당 범위 내 chats(채팅)가 없습니다.")
 
     # ------------------ CSat 분석 ------------------
     csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
