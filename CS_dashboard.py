@@ -69,11 +69,11 @@ if "mediumType" in df.columns:
 st.title("CS 대시보드")
 
 # ===================== 1. 필터 UI: 한 줄에 모두 =========================
+# 4월 1일부터로 고정
+min_date = datetime.date(2024, 4, 1)
 if not df['firstAskedAt'].isna().all():
-    min_date = df['firstAskedAt'].min().date()
     max_date = df['firstAskedAt'].max().date()
 else:
-    min_date = datetime.date(2023, 4, 1)
     max_date = datetime.date.today()
 
 # 1줄(6칸)로 기간, 유형 선택 배치
@@ -114,6 +114,9 @@ with col6:
 start_date, end_date = 기간
 기간필터 = (df['firstAskedAt'].dt.date >= start_date) & (df['firstAskedAt'].dt.date <= end_date)
 df = df[기간필터].reset_index(drop=True)
+
+# 4월 1일 이전 데이터 제거 (2월, 3월 데이터 제외)
+df = df[df['firstAskedAt'].dt.date >= datetime.date(2024, 4, 1)].reset_index(drop=True)
 
 # 필터 적용
 cond = pd.Series([True] * len(df))
@@ -308,84 +311,84 @@ if not filtered.empty:
     
 
 
-    # ------------------ CSat 분석 ------------------
-    csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
-    csat_text_cols = ["A-3", "A-6"]
+    # ------------------ CSat 분석 (비활성화) ------------------
+    # csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
+    # csat_text_cols = ["A-3", "A-6"]
 
-    st.header("CSat(고객만족도) 분석")
-    csat_avg = filtered[csat_score_cols].mean().reset_index()
-    csat_avg.columns = ["문항", "평균점수"]
-    chart3 = alt.Chart(csat_avg).mark_bar().encode(
-        x=alt.X("평균점수:Q",
-        title="평균 점수",
-        scale=alt.Scale(domain=[0, 5], nice=False),     # 1~5로 고정, 소수점 없이
-        axis=alt.Axis(values=[0, 1, 2, 3, 4, 5], format='.0f') # 눈금 값 직접 지정, 정수로 표기)
-        ),
-        y=alt.Y("문항:N", sort='-x', title="문항"),
-        tooltip=["문항", "평균점수"]
-    )
-    st.subheader("1. CSat 문항별 평균 점수")
-    st.altair_chart(chart3, use_container_width=True)
+    # st.header("CSat(고객만족도) 분석")
+    # csat_avg = filtered[csat_score_cols].mean().reset_index()
+    # csat_avg.columns = ["문항", "평균점수"]
+    # chart3 = alt.Chart(csat_avg).mark_bar().encode(
+    #     x=alt.X("평균점수:Q",
+    #     title="평균 점수",
+    #     scale=alt.Scale(domain=[0, 5], nice=False),     # 1~5로 고정, 소수점 없이
+    #     axis=alt.Axis(values=[0, 1, 2, 3, 4, 5], format='.0f') # 눈금 값 직접 지정, 정수로 표기)
+    #     ),
+    #     y=alt.Y("문항:N", sort='-x', title="문항"),
+    #     tooltip=["문항", "평균점수"]
+    # )
+    # st.subheader("1. CSat 문항별 평균 점수")
+    # st.altair_chart(chart3, use_container_width=True)
 
-    st.subheader("2. 유형별 CSat 교차분석")
-    groupby_options = {
-        "고객유형": "고객유형",
-        "문의유형": "문의유형"
-    }
-    group_col = st.selectbox("분석할 분류(유형) 선택", list(groupby_options.keys()), key="cross_group")
-    group_col_df = groupby_options[group_col]
-    if group_col_df in filtered.columns:
-        selected_csat = st.selectbox("비교할 CSat 항목 선택", csat_score_cols, key="csat_cross")
-        gb = filtered.groupby(group_col_df)[selected_csat].mean().reset_index()
-        gb.columns = [group_col_df, "평균점수"]
-        gb = gb[gb["평균점수"].notna() & (gb["평균점수"] > 0)]
-        chart4 = alt.Chart(gb).mark_bar().encode(
-            x=alt.X("평균점수:Q", title="평균 점수",
-                    scale=alt.Scale(domain=[0, 5], nice=False),     # 1~5로 고정, 소수점 없이
-                    axis=alt.Axis(values=[0, 1, 2, 3, 4, 5], format='.0f') # 눈금 값 직접 지정, 정수로 표기)
-            ),
-            y=alt.Y(f"{group_col_df}:N", sort='-x', title=group_col_df),
-            tooltip=[group_col_df, "평균점수"]
-        )
-        st.altair_chart(chart4, use_container_width=True)
+    # st.subheader("2. 유형별 CSat 교차분석")
+    # groupby_options = {
+    #     "고객유형": "고객유형",
+    #     "문의유형": "문의유형"
+    # }
+    # group_col = st.selectbox("분석할 분류(유형) 선택", list(groupby_options.keys()), key="cross_group")
+    # group_col_df = groupby_options[group_col]
+    # if group_col_df in filtered.columns:
+    #     selected_csat = st.selectbox("비교할 CSat 항목 선택", csat_score_cols, key="csat_cross")
+    #     gb = filtered.groupby(group_col_df)[selected_csat].mean().reset_index()
+    #     gb.columns = [group_col_df, "평균점수"]
+    #     gb = gb[gb["평균점수"].notna() & (gb["평균점수"] > 0)]
+    #     chart4 = alt.Chart(gb).mark_bar().encode(
+    #         x=alt.X("평균점수:Q", title="평균 점수",
+    #                 scale=alt.Scale(domain=[0, 5], nice=False),     # 1~5로 고정, 소수점 없이
+    #                 axis=alt.Axis(values=[0, 1, 2, 3, 4, 5], format='.0f') # 눈금 값 직접 지정, 정수로 표기)
+    #         ),
+    #         y=alt.Y(f"{group_col_df}:N", sort='-x', title=group_col_df),
+    #         tooltip=[group_col_df, "평균점수"]
+    #         )
+    #         st.altair_chart(chart4, use_container_width=True)
 
-    st.header("3. CSat 점수 분포")
-    selected_hist = st.selectbox("점수 분포 볼 항목 선택", csat_score_cols, key="csat_hist2")
-    filtered_scores = filtered[selected_hist].dropna().astype(int)
+    # st.header("3. CSat 점수 분포")
+    # selected_hist = st.selectbox("점수 분포 볼 항목 선택", csat_score_cols, key="csat_hist2")
+    # filtered_scores = filtered[selected_hist].dropna().astype(int)
 
-    score_bins = pd.Series([1, 2, 3, 4, 5], name="점수")
-    score_counts = filtered_scores.value_counts().reindex(score_bins, fill_value=0).sort_index()
+    # score_bins = pd.Series([1, 2, 3, 4, 5], name="점수")
+    # score_counts = filtered_scores.value_counts().reindex(score_bins, fill_value=0).sort_index()
 
-    # DataFrame으로 변환 후 컬럼명 지정
-    score_counts_df = score_counts.reset_index()
-    score_counts_df.columns = ["점수", "건수"]
+    # # DataFrame으로 변환 후 컬럼명 지정
+    # score_counts_df = score_counts.reset_index()
+    # score_counts_df.columns = ["점수", "건수"]
 
-    import altair as alt
+    # import altair as alt
 
-    chart = alt.Chart(score_counts_df).mark_bar().encode(
-        x=alt.X("점수:O", axis=alt.Axis(title="점수")),
-        y=alt.Y("건수:Q", axis=alt.Axis(title="건수")),
-        tooltip=["점수", "건수"]
-    ).properties(width=400, height=300)
+    # chart = alt.Chart(score_counts_df).mark_bar().encode(
+    #     x=alt.X("점수:O", axis=alt.Axis(title="점수")),
+    #     y=alt.Y("건수:Q", axis=alt.Axis(title="건수")),
+    #     tooltip=["점수", "건수"]
+    # ).properties(width=400, height=300)
 
-    st.altair_chart(chart, use_container_width=True)
+    # st.altair_chart(chart, use_container_width=True)
 
-    st.subheader("4. 월별 CSat 점수")
-    trend_csat = st.selectbox("CSat 항목 선택", csat_score_cols, key="csat_trend")
+    # st.subheader("4. 월별 CSat 점수")
+    # trend_csat = st.selectbox("CSat 항목 선택", csat_score_cols, key="csat_trend")
 
-    # 'month'에서 월만 추출
-    trend_df = filtered.groupby("month")[trend_csat].mean().reset_index()
-    trend_df["월"] = trend_df["month"].apply(lambda x: str(x)[-2:])  # 마지막 두자리만
+    # # 'month'에서 월만 추출
+    # trend_df = filtered.groupby("month")[trend_csat].mean().reset_index()
+    # trend_df["월"] = trend_df["month"].apply(lambda x: str(x)[-2:])  # 마지막 두자리만
 
-    import altair as alt
+    # import altair as alt
 
-    trend_chart = alt.Chart(trend_df).mark_line(point=True).encode(
-        x=alt.X("월:N", axis=alt.Axis(title="월", labelAngle=0)),
-        y=alt.Y(f"{trend_csat}:Q", axis=alt.Axis(title="평균 점수")),
-        tooltip=["월", trend_csat]
-    ).properties(width=500, height=300)
+    # trend_chart = alt.Chart(trend_df).mark_line(point=True).encode(
+    #     x=alt.X("월:N", axis=alt.Axis(title="월", labelAngle=0)),
+    #     y=alt.Y(f"{trend_csat}:Q", axis=alt.Axis(title="평균 점수")),
+    #     tooltip=["월", trend_csat]
+    # ).properties(width=500, height=300)
 
-    st.altair_chart(trend_chart, use_container_width=True)
+    # st.altair_chart(trend_chart, use_container_width=True)
 
 
 
