@@ -62,7 +62,9 @@ stopwords = [
 
 DATA_PATH = "cs_chat_4-7.jsonl"
 df = load_data(DATA_PATH)
-df = df[df["mediumType"] != "phone"].reset_index(drop=True)
+# mediumType 컬럼이 있는 경우에만 필터링
+if "mediumType" in df.columns:
+    df = df[df["mediumType"] != "phone"].reset_index(drop=True)
 
 st.title("CS 대시보드")
 
