@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import altair as alt
 import re
-from wordcloud import WordCloud
+import plotly.express as px
 
 
 @st.cache_data
@@ -57,27 +57,7 @@ stopwords = [
     "수 있을까요", "지금"
 ]
 
-def filter_chats(chat_list):
-    if not isinstance(chat_list, list):
-        return []
-    cleaned = []
-    for text in chat_list:
-        if not isinstance(text, str):
-            continue
-        # 1. @ 들어가면 (이메일, 멘션 등 포함) → 삭제
-        if "@" in text:
-            continue
-        # 2. http(s) 주소 포함 → 삭제
-        if re.search(r"https?://", text):
-            continue
-        # 3. 줄바꿈 포함 → 삭제
-        if "\n" in text:
-            continue
-        # 4. stopwords(상투어구) 포함 → 삭제
-        if any(word in text for word in stopwords):
-            continue
-        cleaned.append(text)
-    return cleaned
+
 
 
 DATA_PATH = "cs_chat_4-7.jsonl"
@@ -86,69 +66,52 @@ df = df[df["mediumType"] != "phone"].reset_index(drop=True)
 
 st.title("CS 대시보드")
 
-# 기간 달력
+# ===================== 1. 필터 UI: 한 줄에 모두 =========================
 if not df['firstAskedAt'].isna().all():
     min_date = df['firstAskedAt'].min().date()
     max_date = df['firstAskedAt'].max().date()
 else:
     min_date = datetime.date(2023, 4, 1)
     max_date = datetime.date.today()
-기간 = st.date_input(
-    "분석할 기간을 선택하세요",
-    (min_date, max_date),
-    min_value=min_date,
-    max_value=max_date,
-    format="YYYY-MM-DD"
-)
+
+# 1줄(6칸)로 기간, 유형 선택 배치
+col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1, 1])
+
+with col1:
+    기간 = st.date_input("기간", (min_date, max_date), min_value=min_date, max_value=max_date, format="YYYY-MM-DD")
+with col2:
+    고객유형 = st.selectbox("고객유형", ["전체"] + sorted(df["고객유형"].dropna().unique()))
+with col3:
+    문의유형 = st.selectbox("문의유형", ["전체"] + sorted(df["문의유형"].dropna().unique()))
+with col4:
+    temp_filtered_2차 = df
+    if 고객유형 != "전체":
+        temp_filtered_2차 = temp_filtered_2차[temp_filtered_2차["고객유형"] == 고객유형]
+    if 문의유형 != "전체":
+        temp_filtered_2차 = temp_filtered_2차[temp_filtered_2차["문의유형"] == 문의유형]
+    문의2_counts = temp_filtered_2차["문의유형_2차"].value_counts().sort_values(ascending=False)
+    문의유형2_options = [f"{k} ({v})" for k, v in 문의2_counts.items() if v > 0 and pd.notnull(k)]
+    문의유형_2차_label = st.selectbox("문의유형 2차", ["전체"] + 문의유형2_options)
+    문의유형_2차 = extract_name(문의유형_2차_label)
+with col5:
+    서비스유형 = st.selectbox("서비스유형", ["전체"] + sorted(df["서비스유형"].dropna().unique()))
+with col6:
+    temp_filtered_서비스2 = df
+    if 고객유형 != "전체":
+        temp_filtered_서비스2 = temp_filtered_서비스2[temp_filtered_서비스2["고객유형"] == 고객유형]
+    if 문의유형 != "전체":
+        temp_filtered_서비스2 = temp_filtered_서비스2[temp_filtered_서비스2["문의유형"] == 문의유형]
+    if 서비스유형 != "전체":
+        temp_filtered_서비스2 = temp_filtered_서비스2[temp_filtered_서비스2["서비스유형"] == 서비스유형]
+    서비스2_counts = temp_filtered_서비스2["서비스유형_2차"].value_counts().sort_values(ascending=False)
+    서비스유형2_options = [f"{k} ({v})" for k, v in 서비스2_counts.items() if v > 0 and pd.notnull(k)]
+    서비스유형_2차_label = st.selectbox("서비스유형 2차", ["전체"] + 서비스유형2_options)
+    서비스유형_2차 = extract_name(서비스유형_2차_label)
+
+# 기간 필터 적용
 start_date, end_date = 기간
 기간필터 = (df['firstAskedAt'].dt.date >= start_date) & (df['firstAskedAt'].dt.date <= end_date)
 df = df[기간필터].reset_index(drop=True)
-
-# ---- 필터 옵션(동기화된 문의량) 공통 코드 ----
-def get_temp_filtered(df, 고객유형, 문의유형, 서비스유형):
-    temp_cond = pd.Series([True] * len(df))
-    if 고객유형 != "전체":
-        temp_cond &= (df["고객유형"] == 고객유형)
-    if 문의유형 != "전체":
-        temp_cond &= (df["문의유형"] == 문의유형)
-    if 서비스유형 != "전체":
-        temp_cond &= (df["서비스유형"] == 서비스유형)
-    return df[temp_cond]
-
-# 필터 UI
-고객유형 = st.selectbox("고객유형", ["전체"] + sorted(df["고객유형"].dropna().unique()))
-
-col1, col2 = st.columns(2)
-with col1:
-    문의유형 = st.selectbox("문의유형", ["전체"] + sorted(df["문의유형"].dropna().unique()))
-with col2:
-    temp_filtered_2차 = get_temp_filtered(df, 고객유형, 문의유형, "전체")
-    문의2_counts = (
-        temp_filtered_2차["문의유형_2차"]
-        .value_counts()
-        .sort_values(ascending=False)
-    )
-    문의유형2_options = [
-        f"{k} ({v})" for k, v in 문의2_counts.items() if v > 0 and pd.notnull(k)
-    ]
-    문의유형_2차_label = st.selectbox("문의유형 2차", ["전체"] + 문의유형2_options)
-    문의유형_2차 = extract_name(문의유형_2차_label)
-
-col3, col4 = st.columns(2)
-with col3:
-    서비스유형 = st.selectbox("서비스유형", ["전체"] + sorted(df["서비스유형"].dropna().unique()))
-with col4:
-    temp_filtered_서비스2 = get_temp_filtered(df, 고객유형, 문의유형, 서비스유형)
-    서비스2_counts = (
-        temp_filtered_서비스2["서비스유형_2차"]
-        .value_counts()
-        .sort_values(ascending=False)
-    )
-    서비스유형2_options = [
-        f"{k} ({v})" for k, v in 서비스2_counts.items() if v > 0 and pd.notnull(k)
-    ]
-    서비스유형_2차_label = st.selectbox("서비스유형 2차", ["전체"] + 서비스유형2_options)
-    서비스유형_2차 = extract_name(서비스유형_2차_label)
 
 # 필터 적용
 cond = pd.Series([True] * len(df))
@@ -249,9 +212,57 @@ if not filtered.empty:
         color=alt.Color('시간종류:N', legend=alt.Legend(title="시간 종류")),
         tooltip=['월', '시간종류', '분']
     ).properties(width=650, height=300)
-
+ 
     st.altair_chart(avg_time_chart, use_container_width=True)
 
+    # ===================== 문의유형별 변화 트리맵 =====================
+    단위 = st.selectbox("단위 선택", ["월간", "주간", "일간"], key="change_period3")
+    if 단위 == "월간":
+        filtered["period"] = filtered["firstAskedAt"].dt.to_period('M').astype(str)
+    elif 단위 == "주간":
+        filtered["period"] = filtered["firstAskedAt"].dt.to_period('W').astype(str)
+    else:
+        filtered["period"] = filtered["firstAskedAt"].dt.date.astype(str)
+
+    periods = sorted(filtered["period"].unique())
+    if len(periods) >= 2:
+        latest, prev = periods[-1], periods[-2]
+    else:
+        st.warning("비교할 기간이 2개 이상 필요합니다.")
+        st.stop()
+
+    now_df = filtered[filtered["period"] == latest].groupby("문의유형").size().rename("이번")
+    prev_df = filtered[filtered["period"] == prev].groupby("문의유형").size().rename("이전")
+    comp_df = pd.concat([now_df, prev_df], axis=1).fillna(0)
+    comp_df["변화량"] = comp_df["이번"] - comp_df["이전"]
+    comp_df["넓이"] = comp_df["변화량"].abs()
+    comp_df["색"] = comp_df["변화량"]
+
+    # 트리맵 표시용 텍스트
+    comp_df["표시"] = comp_df["변화량"].apply(lambda x: f"{int(x):+d}")
+
+    comp_df = comp_df.reset_index()
+
+    if comp_df["넓이"].sum() == 0:
+        st.info("문의량 변화가 없습니다.")
+    else:
+        fig = px.treemap(
+            comp_df,
+            path=["문의유형"],
+            values="넓이",
+            color="색",
+            color_continuous_scale=["blue", "white", "red"],
+            color_continuous_midpoint=0,
+            hover_data={"변화량": True, "넓이": False, "색": False},
+            custom_data=["표시"],  # 이거!
+        )
+        fig.update_traces(
+            texttemplate="<b>%{label}</b><br>%{customdata[0]}",  # ← 여기!
+            textposition="middle center"
+        )
+        fig.update_layout(margin=dict(t=30, l=0, r=0, b=0))
+        st.subheader(f"문의유형별 {단위} 문의량 변화")
+        st.plotly_chart(fig, use_container_width=True)
 
     # 고객유형별 CS 문의량 집계
     top_n = 5
@@ -293,26 +304,7 @@ if not filtered.empty:
     else:
         st.info("고객유형 데이터가 없습니다.")
     
-    #cs 워드클라우드
 
-    # chats 필드가 있는 DataFrame
-    filtered["filtered_chats"] = filtered["chats"].apply(filter_chats)
-
-    # 워드클라우드 등 가공용으로 join해서 사용
-    texts = filtered["filtered_chats"].dropna().apply(lambda x: " ".join(x)).astype(str)
-    full_text = " ".join(texts)
-
-
-    st.subheader("CS 워드클라우드")
-    if texts.str.strip().sum():  # 비어있지 않으면
-        wordcloud = WordCloud(font_path="NanumGothic.ttf", width=800, height=400, background_color="white").generate(full_text)
-        plt.figure(figsize=(10, 5))
-        plt.imshow(wordcloud, interpolation='bilinear')
-        plt.axis("off")
-        st.pyplot(plt.gcf())
-        plt.close()
-    else:
-        st.info("해당 범위 내 chats(채팅)가 없습니다.")
 
     # ------------------ CSat 분석 ------------------
     csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
@@ -393,19 +385,7 @@ if not filtered.empty:
 
     st.altair_chart(trend_chart, use_container_width=True)
 
-    st.subheader("5. 자유서술형(코멘트) 워드클라우드")
-    text_sel = st.selectbox("워드클라우드 만들 문항 선택", csat_text_cols)
-    texts = filtered[text_sel].dropna().astype(str)
-    if len(texts) > 0:
-        full_text = " ".join(texts)
-        wordcloud = WordCloud(font_path="NanumGothic.ttf", width=800, height=400, background_color="white").generate(full_text)
-        plt.figure(figsize=(10,5))
-        plt.imshow(wordcloud, interpolation='bilinear')
-        plt.axis("off")
-        st.pyplot(plt.gcf())
-        plt.close()
-    else:
-        st.info("해당 문항에 입력된 코멘트가 없습니다.")
+
 
 else:
     st.warning("선택한 조건에 해당하는 데이터가 없습니다.")
