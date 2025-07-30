@@ -146,6 +146,8 @@ if not filtered.empty:
     if date_group == "월간":
         period_counts = filtered.groupby('month').size().reset_index(name="문의량")
         period_counts["월"] = period_counts["month"].apply(lambda x: str(x)[-2:])
+        # 4월부터 7월까지만 필터링 (02, 03 제거)
+        period_counts = period_counts[period_counts["월"].isin(["04", "05", "06", "07"])]
         chart = alt.Chart(period_counts).mark_line(point=True).encode(
             x=alt.X("월:N", axis=alt.Axis(labelAngle=0, title="월")),
             y=alt.Y("문의량:Q", title="CS 문의량"),
@@ -206,6 +208,8 @@ if not filtered.empty:
         avg_time_df[time_keys_kr[eng_key]] = avg_time_df["month"].map(col_minutes)
 
     avg_time_df["월"] = avg_time_df["month"].apply(lambda x: str(x)[-2:])
+    # 4월부터 7월까지만 필터링 (02, 03 제거)
+    avg_time_df = avg_time_df[avg_time_df["월"].isin(["04", "05", "06", "07"])]
 
     # long 포맷
     ordered_keys = ["첫응답시간", "평균응답시간", "총응답시간", "해결시간"]
