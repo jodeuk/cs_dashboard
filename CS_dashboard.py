@@ -224,28 +224,6 @@ if not filtered.empty:
  
     st.altair_chart(avg_time_chart, use_container_width=True)
 
-    # ===================== 문의유형별 변화 트리맵 =====================
-    단위 = st.selectbox("단위 선택", ["월간", "주간", "일간"], key="change_period3")
-    if 단위 == "월간":
-        filtered["period"] = filtered["firstAskedAt"].dt.to_period('M').astype(str)
-    elif 단위 == "주간":
-        filtered["period"] = filtered["firstAskedAt"].dt.to_period('W').astype(str)
-    else:
-        filtered["period"] = filtered["firstAskedAt"].dt.date.astype(str)
-
-    periods = sorted(filtered["period"].unique())
-    if len(periods) >= 2:
-        latest, prev = periods[-1], periods[-2]
-    else:
-        st.warning("비교할 기간이 2개 이상 필요합니다.")
-        st.stop()
-
-    now_df = filtered[filtered["period"] == latest].groupby("문의유형").size().rename("이번")
-    prev_df = filtered[filtered["period"] == prev].groupby("문의유형").size().rename("이전")
-    comp_df = pd.concat([now_df, prev_df], axis=1).fillna(0)
-    comp_df["변화량"] = comp_df["이번"] - comp_df["이전"]
-    comp_df["넓이"] = comp_df["변화량"].abs()
-    comp_df["색"] = comp_df["변화량"]
 
     # 문의유형별 CS 문의량 & 2차 문의유형별 CS 문의량 (동일 위치, 조건 분기)
     if 문의유형 == "전체":
@@ -312,6 +290,29 @@ if not filtered.empty:
     else:
         st.info("고객유형 데이터가 없습니다.")
 
+    # ===================== 문의유형별 변화 트리맵 =====================
+    단위 = st.selectbox("단위 선택", ["월간", "주간", "일간"], key="change_period3")
+    if 단위 == "월간":
+        filtered["period"] = filtered["firstAskedAt"].dt.to_period('M').astype(str)
+    elif 단위 == "주간":
+        filtered["period"] = filtered["firstAskedAt"].dt.to_period('W').astype(str)
+    else:
+        filtered["period"] = filtered["firstAskedAt"].dt.date.astype(str)
+
+    periods = sorted(filtered["period"].unique())
+    if len(periods) >= 2:
+        latest, prev = periods[-1], periods[-2]
+    else:
+        st.warning("비교할 기간이 2개 이상 필요합니다.")
+        st.stop()
+
+    now_df = filtered[filtered["period"] == latest].groupby("문의유형").size().rename("이번")
+    prev_df = filtered[filtered["period"] == prev].groupby("문의유형").size().rename("이전")
+    comp_df = pd.concat([now_df, prev_df], axis=1).fillna(0)
+    comp_df["변화량"] = comp_df["이번"] - comp_df["이전"]
+    comp_df["넓이"] = comp_df["변화량"].abs()
+    comp_df["색"] = comp_df["변화량"]
+
     # 트리맵 표시용 텍스트
     comp_df["표시"] = comp_df["변화량"].apply(lambda x: f"{int(x):+d}")
 
@@ -374,20 +375,70 @@ for col in csat_score_cols:
 if csat_summary:
     summary_df = pd.DataFrame(csat_summary)
     
-    # 평균 점수 텍스트로 표시
-    st.subheader("평균 점수")
-    for item in csat_summary:
-        st.write(f"{item['항목']}: {item['평균점수']}점")
+    # total_responses와 response_count를 겹친 막대 차트
+    st.subheader("응답자수 및 응답률")
     
-    # 응답률 차트 추가
-    response_rate_chart = alt.Chart(summary_df).mark_bar().encode(
-        x=alt.X('항목:N', title='CSat 항목'),
-        y=alt.Y('응답률(%):Q', title='응답률 (%)'),
-        tooltip=['항목', '응답률(%)', '응답자수']
+    # 차트 데이터 준비
+    chart_data = []
+    for item in csat_summary:
+        chart_data.append({
+            '항목': item['항목'],
+            '응답자수': item['응답자수'],
+            '유형': '응답자'
+        })
+        chart_data.append({
+            '항목': item['항목'],
+            '응답자수': total_responses - item['응답자수'],
+            '유형': '미응답자'
+        })
+    
+    chart_df = pd.DataFrame(chart_data)
+    
+    # 겹친 막대 차트
+    response_chart = alt.Chart(chart_df).mark_bar().encode(
+        x=alt.X('항목:N', title='CSat 항목', axis=alt.Axis(labelAngle=0)),
+        y=alt.Y('응답자수:Q', title='응답자수'),
+        color=alt.Color('유형:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e'])),
+        tooltip=['항목', '유형', '응답자수']
     ).properties(width=600, height=300)
     
-    st.subheader("응답률 차트")
-    st.altair_chart(response_rate_chart, use_container_width=True)
+    # 비율 텍스트 추가
+    text_data = []
+    for item in csat_summary:
+        text_data.append({
+            '항목': item['항목'],
+            '응답자수': item['응답자수'],
+            '비율': f"{item['응답률(%)']:.1f}%",
+            '평균점수': f"평균: {item['평균점수']}점"
+        })
+    
+    text_df = pd.DataFrame(text_data)
+    text_chart = alt.Chart(text_df).mark_text(
+        align='center',
+        baseline='middle',
+        dy=-10,
+        fontSize=12,
+        fontWeight='bold'
+    ).encode(
+        x=alt.X('항목:N'),
+        y=alt.Y('응답자수:Q'),
+        text=alt.Text('비율:N')
+    )
+    
+    # 평균 점수 텍스트 추가
+    score_chart = alt.Chart(text_df).mark_text(
+        align='center',
+        baseline='middle',
+        dy=10,
+        fontSize=10,
+        color='gray'
+    ).encode(
+        x=alt.X('항목:N'),
+        y=alt.Y('응답자수:Q'),
+        text=alt.Text('평균점수:N')
+    )
+    
+    st.altair_chart(response_chart + text_chart + score_chart, use_container_width=True)
 else:
     st.info("CSat 데이터가 없습니다.")
 
@@ -414,9 +465,7 @@ if type_col in df.columns:
     type_scores = type_scores.sort_values('평균점수', ascending=False)
     
     if not type_scores.empty:
-        st.dataframe(type_scores, use_container_width=True)
-        
-        # 차트로도 표시
+        # 차트로 표시
         chart = alt.Chart(type_scores).mark_bar().encode(
             x=alt.X('평균점수:Q', title='평균 점수'),
             y=alt.Y(f'{type_col}:N', sort='-x', title=type_col),
