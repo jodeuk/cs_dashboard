@@ -377,18 +377,20 @@ for col in csat_score_cols:
         })
 
 if csat_summary:
-    summary_df = pd.DataFrame(csat_summary)
+    # 항목 라벨에 평균점수 추가
+    for item in csat_summary:
+        item['라벨'] = f"{item['항목']} ({item['평균점수']}점)"
 
     # total_responses와 response_count를 겹친 막대 차트
     chart_data = []
     for item in csat_summary:
         chart_data.append({
-            '항목': f"{item['항목']}",
+            '항목': item['라벨'],
             '응답자수': item['응답자수'],
             '유형': '응답자'
         })
         chart_data.append({
-            '항목': f"{item['항목']}",
+            '항목': item['라벨'],
             '응답자수': total_responses - item['응답자수'],
             '유형': '미응답자'
         })
@@ -405,7 +407,7 @@ if csat_summary:
     text_data = []
     for item in csat_summary:
         text_data.append({
-            '항목': item['항목'],
+            '항목': item['라벨'],
             '응답자수': item['응답자수'] / 2,  # 응답자수 막대의 중앙
             '비율': f"{item['응답률(%)']:.1f}%"
         })
@@ -423,6 +425,7 @@ if csat_summary:
     )
 
     st.altair_chart(response_chart + text_chart, use_container_width=True)
+
 else:
     st.info("CSat 데이터가 없습니다.")
 
