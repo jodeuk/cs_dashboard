@@ -355,7 +355,11 @@ st.subheader("1. 항목별 점수, 응답자수, 응답률")
 
 csat_summary = []
 # workflowId가 "768201"인 것만으로 total_responses 계산
-total_responses = len(df[df['workflowId'] == '768201'])
+if 'workflowId' in df.columns:
+    total_responses = len(df[df['workflowId'] == '768201'])
+else:
+    # workflowId 컬럼이 없는 경우 전체 데이터로 계산
+    total_responses = len(df)
 
 for col in csat_score_cols:
     if col in df.columns:
