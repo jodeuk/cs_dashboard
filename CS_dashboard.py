@@ -378,11 +378,8 @@ for col in csat_score_cols:
 
 if csat_summary:
     summary_df = pd.DataFrame(csat_summary)
-    
-    # total_responses와 response_count를 겹친 막대 차트
 
-    
-    # 차트 데이터 준비 (X축 라벨에 평균 점수 포함)
+    # total_responses와 response_count를 겹친 막대 차트
     chart_data = []
     for item in csat_summary:
         chart_data.append({
@@ -395,32 +392,28 @@ if csat_summary:
             '응답자수': total_responses - item['응답자수'],
             '유형': '미응답자'
         })
-    
     chart_df = pd.DataFrame(chart_data)
-    
-    # 겹친 막대 차트
+
     response_chart = alt.Chart(chart_df).mark_bar().encode(
         x=alt.X('항목:N', title='CSat 항목', axis=alt.Axis(labelAngle=0)),
         y=alt.Y('응답자수:Q', title='응답자수'),
         color=alt.Color('유형:N', scale=alt.Scale(range=['#1f77b4', '#ff7f0e'])),
         tooltip=['항목', '유형', '응답자수']
     ).properties(width=600, height=300)
-    
-    # 비율 텍스트 추가
+
+    # 텍스트 - 막대 중앙에 표시
     text_data = []
     for item in csat_summary:
         text_data.append({
-            '항목': f"평균 : {item['평균점수']}점",
-            '응답자수': item['응답자수'],
+            '항목': item['항목'],
+            '응답자수': item['응답자수'] / 2,  # 응답자수 막대의 중앙
             '비율': f"{item['응답률(%)']:.1f}%"
         })
-    
     text_df = pd.DataFrame(text_data)
     text_chart = alt.Chart(text_df).mark_text(
         align='center',
         baseline='middle',
-        dy=0,
-        fontSize=12,
+        fontSize=18,
         fontWeight='bold',
         color='white'
     ).encode(
@@ -428,7 +421,7 @@ if csat_summary:
         y=alt.Y('응답자수:Q'),
         text=alt.Text('비율:N')
     )
-    
+
     st.altair_chart(response_chart + text_chart, use_container_width=True)
 else:
     st.info("CSat 데이터가 없습니다.")
