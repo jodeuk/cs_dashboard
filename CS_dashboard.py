@@ -354,9 +354,8 @@ st.header("CSat(고객만족도) 분석")
 st.subheader("1. 항목별 점수, 응답자수, 응답률")
 
 csat_summary = []
-# 2025-07-18 이후 데이터이면서 mediumType이 native인 것만으로 total_responses 계산
-cutoff_date = pd.to_datetime("2025-07-18T10:00:00")
-total_responses = len(df[(df['firstAskedAt'] >= cutoff_date) & (df['mediumType'] == 'native')])
+# workflowId가 "768201"인 것만으로 total_responses 계산
+total_responses = len(df[df['workflow'] == '768201'])
 
 for col in csat_score_cols:
     if col in df.columns:
@@ -378,16 +377,16 @@ if csat_summary:
     # total_responses와 response_count를 겹친 막대 차트
     st.subheader("응답자수 및 응답률")
     
-    # 차트 데이터 준비
+    # 차트 데이터 준비 (X축 라벨에 평균 점수 포함)
     chart_data = []
     for item in csat_summary:
         chart_data.append({
-            '항목': item['항목'],
+            '항목': f"{item['항목']} (평균: {item['평균점수']}점)",
             '응답자수': item['응답자수'],
             '유형': '응답자'
         })
         chart_data.append({
-            '항목': item['항목'],
+            '항목': f"{item['항목']} (평균: {item['평균점수']}점)",
             '응답자수': total_responses - item['응답자수'],
             '유형': '미응답자'
         })
@@ -406,10 +405,9 @@ if csat_summary:
     text_data = []
     for item in csat_summary:
         text_data.append({
-            '항목': item['항목'],
+            '항목': f"{item['항목']} 평균:{item['평균점수']}점",
             '응답자수': item['응답자수'],
-            '비율': f"{item['응답률(%)']:.1f}%",
-            '평균점수': f"평균: {item['평균점수']}점"
+            '비율': f"{item['응답률(%)']:.1f}%"
         })
     
     text_df = pd.DataFrame(text_data)
@@ -418,27 +416,15 @@ if csat_summary:
         baseline='middle',
         dy=-10,
         fontSize=12,
-        fontWeight='bold'
+        fontWeight='bold',
+        color='white'
     ).encode(
         x=alt.X('항목:N'),
         y=alt.Y('응답자수:Q'),
         text=alt.Text('비율:N')
     )
     
-    # 평균 점수 텍스트 추가
-    score_chart = alt.Chart(text_df).mark_text(
-        align='center',
-        baseline='middle',
-        dy=10,
-        fontSize=10,
-        color='gray'
-    ).encode(
-        x=alt.X('항목:N'),
-        y=alt.Y('응답자수:Q'),
-        text=alt.Text('평균점수:N')
-    )
-    
-    st.altair_chart(response_chart + text_chart + score_chart, use_container_width=True)
+    st.altair_chart(response_chart + text_chart, use_container_width=True)
 else:
     st.info("CSat 데이터가 없습니다.")
 
