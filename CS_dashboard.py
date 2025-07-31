@@ -354,11 +354,7 @@ else:
 # ------------------ CSat 분석 ------------------
 csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
 
-mask = df_original["workflowId"].astype(str).str.strip() == "768201"
-total_responses = mask.sum()
-
-print("총 개수:", total_responses)
-print("샘플 row들:\n", df_original[mask].head(10))
+total_responses = len(df_original[df_original['workflowId'] == '768201'])
 
 # 1. 항목별 점수, 응답자수, 응답률
 st.subheader("1. 항목별 평균점수, 응답자수, 응답률")
