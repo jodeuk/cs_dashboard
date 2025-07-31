@@ -410,7 +410,7 @@ if csat_summary:
     text_data = []
     for item in csat_summary:
         text_data.append({
-            '항목': f"{item['항목']} 평균:{item['평균점수']}점",
+            '항목': f"평균 : {item['평균점수']}점",
             '응답자수': item['응답자수'],
             '비율': f"{item['응답률(%)']:.1f}%"
         })
@@ -419,7 +419,7 @@ if csat_summary:
     text_chart = alt.Chart(text_df).mark_text(
         align='center',
         baseline='middle',
-        dy=0,
+        dy=-10,
         fontSize=12,
         fontWeight='bold',
         color='white'
