@@ -419,7 +419,7 @@ if csat_summary:
     text_chart = alt.Chart(text_df).mark_text(
         align='center',
         baseline='middle',
-        dy=-10,
+        dy=0,
         fontSize=12,
         fontWeight='bold',
         color='white'
