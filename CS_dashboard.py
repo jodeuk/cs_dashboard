@@ -361,7 +361,6 @@ st.subheader("1. 항목별 평균점수, 응답자수, 응답률")
 
 csat_summary = []
 
-total_responses = len(df_original[df_original['workflowId'].astype(str) == '768201'])
 
 for col in csat_score_cols:
     if col in df_original.columns:
