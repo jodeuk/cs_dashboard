@@ -66,6 +66,9 @@ df = load_data(DATA_PATH)
 if "mediumType" in df.columns:
     df = df[df["mediumType"] != "phone"].reset_index(drop=True)
 
+# CSat 분석용 원본 데이터 저장
+df_original = df.copy()
+
 st.title("CS 대시보드")
 
 # ===================== 1. 필터 UI: 한 줄에 모두 =========================
@@ -348,22 +351,22 @@ else:
 # ------------------ CSat 분석 ------------------
 csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
 
-st.header("CSat(고객만족도) 분석")
+
 
 # 1. 항목별 점수, 응답자수, 응답률
-st.subheader("1. 항목별 점수, 응답자수, 응답률")
+st.subheader("1. 항목별 평균점수, 응답자수, 응답률")
 
 csat_summary = []
 # workflowId가 "768201"인 것만으로 total_responses 계산
-if 'workflowId' in df.columns:
-    total_responses = len(df[df['workflowId'] == '768201'])
+if 'workflowId' in df_original.columns:
+    total_responses = len(df_original[df_original['workflowId'] == '768201'])
 else:
     # workflowId 컬럼이 없는 경우 전체 데이터로 계산
-    total_responses = len(df)
+    total_responses = len(df_original)
 
 for col in csat_score_cols:
-    if col in df.columns:
-        valid_responses = df[col].dropna()
+    if col in df_original.columns:
+        valid_responses = df_original[col].dropna()
         response_count = len(valid_responses)
         response_rate = (response_count / total_responses * 100) if total_responses > 0 else 0
         avg_score = valid_responses.mean() if len(valid_responses) > 0 else 0
@@ -379,7 +382,7 @@ if csat_summary:
     summary_df = pd.DataFrame(csat_summary)
     
     # total_responses와 response_count를 겹친 막대 차트
-    st.subheader("응답자수 및 응답률")
+
     
     # 차트 데이터 준비 (X축 라벨에 평균 점수 포함)
     chart_data = []
@@ -418,7 +421,7 @@ if csat_summary:
     text_chart = alt.Chart(text_df).mark_text(
         align='center',
         baseline='middle',
-        dy=-10,
+        dy=0,
         fontSize=12,
         fontWeight='bold',
         color='white'
@@ -444,11 +447,11 @@ type_options = {
 selected_type = st.selectbox("분석할 유형 선택", list(type_options.keys()))
 type_col = type_options[selected_type]
 
-if type_col in df.columns:
+if type_col in df_original.columns:
     selected_csat = st.selectbox("CSat 항목 선택", csat_score_cols, key="csat_type")
     
     # 유형별 평균 점수 계산
-    type_scores = df.groupby(type_col)[selected_csat].agg(['mean', 'count']).reset_index()
+    type_scores = df_original.groupby(type_col)[selected_csat].agg(['mean', 'count']).reset_index()
     type_scores.columns = [type_col, '평균점수', '응답자수']
     type_scores = type_scores[type_scores['평균점수'].notna() & (type_scores['평균점수'] > 0)]
     type_scores['평균점수'] = type_scores['평균점수'].round(2)
