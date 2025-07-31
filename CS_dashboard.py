@@ -364,6 +364,7 @@ else:
     # workflowId 컬럼이 없는 경우 전체 데이터로 계산
     total_responses = len(df_original)
 
+
 for col in csat_score_cols:
     if col in df_original.columns:
         valid_responses = df_original[col].dropna()
