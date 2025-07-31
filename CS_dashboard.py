@@ -60,7 +60,7 @@ stopwords = [
 
 
 
-DATA_PATH = "cs_chat_4-7.jsonl"
+DATA_PATH = "cs_730.jsonl"
 df = load_data(DATA_PATH)
 # mediumType 컬럼이 있는 경우에만 필터링
 if "mediumType" in df.columns:
@@ -315,84 +315,74 @@ if not filtered.empty:
     
 
 
-    # ------------------ CSat 분석 (비활성화) ------------------
-    # csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
-    # csat_text_cols = ["A-3", "A-6"]
-
-    # st.header("CSat(고객만족도) 분석")
-    # csat_avg = filtered[csat_score_cols].mean().reset_index()
-    # csat_avg.columns = ["문항", "평균점수"]
-    # chart3 = alt.Chart(csat_avg).mark_bar().encode(
-    #     x=alt.X("평균점수:Q",
-    #     title="평균 점수",
-    #     scale=alt.Scale(domain=[0, 5], nice=False),     # 1~5로 고정, 소수점 없이
-    #     axis=alt.Axis(values=[0, 1, 2, 3, 4, 5], format='.0f') # 눈금 값 직접 지정, 정수로 표기)
-    #     ),
-    #     y=alt.Y("문항:N", sort='-x', title="문항"),
-    #     tooltip=["문항", "평균점수"]
-    # )
-    # st.subheader("1. CSat 문항별 평균 점수")
-    # st.altair_chart(chart3, use_container_width=True)
-
-    # st.subheader("2. 유형별 CSat 교차분석")
-    # groupby_options = {
-    #     "고객유형": "고객유형",
-    #     "문의유형": "문의유형"
-    # }
-    # group_col = st.selectbox("분석할 분류(유형) 선택", list(groupby_options.keys()), key="cross_group")
-    # group_col_df = groupby_options[group_col]
-    # if group_col_df in filtered.columns:
-    #     selected_csat = st.selectbox("비교할 CSat 항목 선택", csat_score_cols, key="csat_cross")
-    #     gb = filtered.groupby(group_col_df)[selected_csat].mean().reset_index()
-    #     gb.columns = [group_col_df, "평균점수"]
-    #     gb = gb[gb["평균점수"].notna() & (gb["평균점수"] > 0)]
-    #     chart4 = alt.Chart(gb).mark_bar().encode(
-    #         x=alt.X("평균점수:Q", title="평균 점수",
-    #                 scale=alt.Scale(domain=[0, 5], nice=False),     # 1~5로 고정, 소수점 없이
-    #                 axis=alt.Axis(values=[0, 1, 2, 3, 4, 5], format='.0f') # 눈금 값 직접 지정, 정수로 표기)
-    #         ),
-    #         y=alt.Y(f"{group_col_df}:N", sort='-x', title=group_col_df),
-    #         tooltip=[group_col_df, "평균점수"]
-    #         )
-    #         st.altair_chart(chart4, use_container_width=True)
-
-    # st.header("3. CSat 점수 분포")
-    # selected_hist = st.selectbox("점수 분포 볼 항목 선택", csat_score_cols, key="csat_hist2")
-    # filtered_scores = filtered[selected_hist].dropna().astype(int)
-
-    # score_bins = pd.Series([1, 2, 3, 4, 5], name="점수")
-    # score_counts = filtered_scores.value_counts().reindex(score_bins, fill_value=0).sort_index()
-
-    # # DataFrame으로 변환 후 컬럼명 지정
-    # score_counts_df = score_counts.reset_index()
-    # score_counts_df.columns = ["점수", "건수"]
-
-    # import altair as alt
-
-    # chart = alt.Chart(score_counts_df).mark_bar().encode(
-    #     x=alt.X("점수:O", axis=alt.Axis(title="점수")),
-    #     y=alt.Y("건수:Q", axis=alt.Axis(title="건수")),
-    #     tooltip=["점수", "건수"]
-    # ).properties(width=400, height=300)
-
-    # st.altair_chart(chart, use_container_width=True)
-
-    # st.subheader("4. 월별 CSat 점수")
-    # trend_csat = st.selectbox("CSat 항목 선택", csat_score_cols, key="csat_trend")
-
-    # # 'month'에서 월만 추출
-    # trend_df = filtered.groupby("month")[trend_csat].mean().reset_index()
-    # trend_df["월"] = trend_df["month"].apply(lambda x: str(x)[-2:])  # 마지막 두자리만
-
-    # import altair as alt
-
-    # trend_chart = alt.Chart(trend_df).mark_line(point=True).encode(
-    #     x=alt.X("월:N", axis=alt.Axis(title="월", labelAngle=0)),
-    #     y=alt.Y(f"{trend_csat}:Q", axis=alt.Axis(title="평균 점수")),
-    #     tooltip=["월", trend_csat]
-    # ).properties(width=500, height=300)
-
-    # st.altair_chart(trend_chart, use_container_width=True)
+    # ------------------ CSat 분석 ------------------
+    csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
+    
+    st.header("CSat(고객만족도) 분석")
+    
+    # 1. 항목별 점수, 응답자수, 응답률
+    st.subheader("1. 항목별 점수, 응답자수, 응답률")
+    
+    csat_summary = []
+    total_responses = len(filtered)
+    
+    for col in csat_score_cols:
+        if col in filtered.columns:
+            valid_responses = filtered[col].dropna()
+            response_count = len(valid_responses)
+            response_rate = (response_count / total_responses * 100) if total_responses > 0 else 0
+            avg_score = valid_responses.mean() if len(valid_responses) > 0 else 0
+            
+            csat_summary.append({
+                "항목": col,
+                "평균점수": round(avg_score, 2),
+                "응답자수": response_count,
+                "응답률(%)": round(response_rate, 1)
+            })
+    
+    if csat_summary:
+        summary_df = pd.DataFrame(csat_summary)
+        st.dataframe(summary_df, use_container_width=True)
+    else:
+        st.info("CSat 데이터가 없습니다.")
+    
+    # 2. 문의유형/고객유형/서비스유형별 점수
+    st.subheader("2. 유형별 CSat 점수")
+    
+    type_options = {
+        "문의유형": "문의유형",
+        "고객유형": "고객유형", 
+        "서비스유형": "서비스유형"
+    }
+    
+    selected_type = st.selectbox("분석할 유형 선택", list(type_options.keys()))
+    type_col = type_options[selected_type]
+    
+    if type_col in filtered.columns:
+        selected_csat = st.selectbox("CSat 항목 선택", csat_score_cols, key="csat_type")
+        
+        # 유형별 평균 점수 계산
+        type_scores = filtered.groupby(type_col)[selected_csat].agg(['mean', 'count']).reset_index()
+        type_scores.columns = [type_col, '평균점수', '응답자수']
+        type_scores = type_scores[type_scores['평균점수'].notna() & (type_scores['평균점수'] > 0)]
+        type_scores['평균점수'] = type_scores['평균점수'].round(2)
+        type_scores = type_scores.sort_values('평균점수', ascending=False)
+        
+        if not type_scores.empty:
+            st.dataframe(type_scores, use_container_width=True)
+            
+            # 차트로도 표시
+            chart = alt.Chart(type_scores).mark_bar().encode(
+                x=alt.X('평균점수:Q', title='평균 점수'),
+                y=alt.Y(f'{type_col}:N', sort='-x', title=type_col),
+                tooltip=[type_col, '평균점수', '응답자수']
+            ).properties(width=600, height=400)
+            
+            st.altair_chart(chart, use_container_width=True)
+        else:
+            st.info(f"선택한 {selected_type}에 대한 CSat 데이터가 없습니다.")
+    else:
+        st.info(f"{selected_type} 컬럼이 데이터에 없습니다.")
 
 
 
