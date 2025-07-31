@@ -358,12 +358,8 @@ st.subheader("1. 항목별 평균점수, 응답자수, 응답률")
 
 csat_summary = []
 # workflowId가 "768201"인 것만으로 total_responses 계산
-if 'workflowId' in df_original.columns:
-    total_responses = len(df_original[df_original['workflowId'] == '768201'])
-else:
-    # workflowId 컬럼이 없는 경우 전체 데이터로 계산
-    total_responses = len(df_original)
 
+total_responses = len(df_original[df_original['workflowId'].astype(str) == '768201'])
 
 for col in csat_score_cols:
     if col in df_original.columns:
@@ -389,12 +385,12 @@ if csat_summary:
     chart_data = []
     for item in csat_summary:
         chart_data.append({
-            '항목': f"{item['항목']} (평균: {item['평균점수']}점)",
+            '항목': f"{item['항목']}",
             '응답자수': item['응답자수'],
             '유형': '응답자'
         })
         chart_data.append({
-            '항목': f"{item['항목']} (평균: {item['평균점수']}점)",
+            '항목': f"{item['항목']}",
             '응답자수': total_responses - item['응답자수'],
             '유형': '미응답자'
         })
