@@ -355,7 +355,8 @@ csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
 
 # 1. 항목별 점수, 응답자수, 응답률
 st.subheader("1. 항목별 평균점수, 응답자수, 응답률")
-
+st.write("컬럼명 리스트:", df_original.columns.tolist())
+st.write("workflowId 예시(최대 10개):", df_original["workflowId"].head(10))
 csat_summary = []
 # workflowId가 "768201"인 것만으로 total_responses 계산
 
