@@ -361,7 +361,8 @@ st.subheader("1. 항목별 평균점수, 응답자수, 응답률")
 
 csat_summary = []
 # workflowId가 "768201"인 것만으로 total_responses 계산
-st.write(df_original["workflowId"].unique())
+cnt = (df_original["workflowId"].astype(str).str.strip() == "768201").sum()
+st.write(f"'workflowId'가 768201인 행 개수: {cnt}")
 total_responses = len(df_original[df_original['workflowId'].astype(str) == '768201'])
 
 for col in csat_score_cols:
