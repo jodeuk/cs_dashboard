@@ -60,7 +60,7 @@ stopwords = [
 
 
 
-DATA_PATH = "cs_730.jsonl"
+DATA_PATH = "cs_808.jsonl"
 df = load_data(DATA_PATH)
 
 if 'workflow' in df.columns and 'workflowId' not in df.columns:
@@ -354,7 +354,7 @@ else:
 # ------------------ CSat 분석 ------------------
 csat_score_cols = ["A-1", "A-2", "A-4", "A-5"]
 
-total_responses = 153
+total_responses = 274
 
 # 1. 항목별 점수, 응답자수, 응답률
 st.subheader("1. 항목별 평균점수, 응답자수, 응답률")
